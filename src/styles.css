@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+/* Self-hosted Awesome Serif Italic — used for the italic serif headings. */
+@font-face {
+  font-family: 'Awesome Serif Italic';
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/fonts/AwesomeSerifItalic-Bold.otf') format('opentype');
+}
+@font-face {
+  font-family: 'Awesome Serif Italic';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/AwesomeSerifItalic-Regular.otf') format('opentype');
+}
+
+/* Self-hosted Figtree — the app's primary sans-serif font. */
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('./assets/fonts/figtree-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('./assets/fonts/figtree-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: #0d0d0d;
+}
+
+body {
+  font-family: 'Figtree', sans-serif;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+
+@keyframes chip-pop {
+  0% {
+    transform: scale(1);
+  }
+  50.875% { /* 575ms of 800ms = 71.875% */
+    transform: scale(1.02);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
+  }
+  100% { /* remaining 225ms (575ms to 800ms) = scale down to 1 */
+    transform: scale(1);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.25, 1);
+  }
+}
+
