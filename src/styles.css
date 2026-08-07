@@ -65,3 +65,52 @@ body {
   }
 }
 
+/* Revolving border animation for the input field */
+@keyframes revolving-border-rotate {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.revolving-border-input {
+  position: relative;
+  overflow: hidden;
+  padding: 1px; /* border thickness */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 28px;
+}
+
+.revolving-border-input::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 250%; /* sufficiently large to cover corners when rotated */
+  height: 600%; /* sufficiently large to cover corners when rotated on wide/thin shapes */
+  background: conic-gradient(
+    from 0deg,
+    #333333 0%,
+    #333333 40%,
+    #F64200 50%,
+    #333333 60%,
+    #333333 100%
+  );
+  animation: revolving-border-rotate 6s linear infinite;
+  z-index: 1;
+}
+
+.revolving-border-inner {
+  position: relative;
+  background: #1a1a1a;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  overflow: hidden;
+  border-radius: 27px; /* slightly smaller than outer border-radius */
+}
+
