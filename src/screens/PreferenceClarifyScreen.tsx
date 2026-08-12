@@ -363,7 +363,7 @@ function PreferenceChip({
 /*                              MAIN SCREEN                                   */
 /* -------------------------------------------------------------------------- */
 
-export function PreferenceClarifyScreen() {
+export function PreferenceClarifyScreen({ onProceed }: { onProceed?: () => void }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [animatingChipId, setAnimatingChipId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -399,6 +399,7 @@ export function PreferenceClarifyScreen() {
 
   const handleProceed = () => {
     console.log("Proceed with", Array.from(selectedIds));
+    onProceed?.();
   };
 
   const handleSkip = () => {

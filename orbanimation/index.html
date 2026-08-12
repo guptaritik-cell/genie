@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Orb Animation</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    background: #000;
+  }
+</style>
+</head>
+<body>
+<canvas id="orb"></canvas>
+<script>
+(function () {
+  "use strict";
+
+  const canvas = document.getElementById("orb");
+  const ctx = canvas.getContext("2d");
+
+  // offscreen buffer holds the crisp (unblurred) render;
+  // the visible canvas = crisp copy + a soft additive blur pass (bloom)
+  const buffer = document.createElement("canvas");
+  const bctx = buffer.getContext("2d");
+
+  let W, H, CX, CY;
+  function resize() {
+    W = canvas.width = buffer.width = window.innerWidth;
+    H = canvas.height = buffer.height = window.innerHeight;
+    CX = W / 2;
+    CY = H / 2;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ---------------------------------------------------------------
+  // Cheap smooth 3D noise (no external libs) - layered sine hash.
+  // ---------------------------------------------------------------
+  function noise3(x, y, z) {
+    const a = Math.sin(x * 1.3 + Math.cos(y * 0.7) * 2.1 + z * 0.4);
+    const b = Math.sin(y * 1.7 + Math.cos(z * 0.9) * 2.1 + x * 0.4);
+    const c = Math.sin(z * 1.1 + Math.cos(x * 0.6) * 2.1 + y * 0.4);
+    return (a + b + c) / 3;
+  }
+
+  // ---------------------------------------------------------------
+  // Color palette: small dark indigo/violet core fading into a
+  // dominant orange body, matching the reference orb image.
+  // ---------------------------------------------------------------
+  const STOPS = [
+    { t: 0.00, c: [8, 8, 24] },
+    { t: 0.10, c: [24, 16, 58] },
+    { t: 0.20, c: [66, 26, 112] },
+    { t: 0.30, c: [150, 40, 100] },
+    { t: 0.42, c: [214, 63, 40] },
+    { t: 1.00, c: [255, 150, 45] }
+  ];
+
+  function getColor(t) {
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    for (let i = 0; i < STOPS.length - 1; i++) {
+      const s0 = STOPS[i], s1 = STOPS[i + 1];
+      if (t >= s0.t && t <= s1.t) {
+        const f = (t - s0.t) / (s1.t - s0.t);
+        return [
+          s0.c[0] + (s1.c[0] - s0.c[0]) * f,
+          s0.c[1] + (s1.c[1] - s0.c[1]) * f,
+          s0.c[2] + (s1.c[2] - s0.c[2]) * f
+        ];
+      }
+    }
+    return STOPS[STOPS.length - 1].c;
+  }
+
+  // ---------------------------------------------------------------
+  // Sphere as a dense Fibonacci point lattice (fine "grid of dots").
+  // ---------------------------------------------------------------
+  const N = 12500;
+  const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+  const points = [];
+  for (let i = 0; i < N; i++) {
+    const yy = 1 - (i / (N - 1)) * 2;
+    const radiusAtY = Math.sqrt(Math.max(0, 1 - yy * yy));
+    const theta = GOLDEN * i;
+    points.push({
+      ux: Math.cos(theta) * radiusAtY,
+      uz: Math.sin(theta) * radiusAtY,
+      uy: yy,
+      sizeVar: 0.6 + (i % 7) / 7 * 0.55
+    });
+  }
+
+  const proj = new Array(N);
+  for (let i = 0; i < N; i++) proj[i] = { sx: 0, sy: 0, pz: 0, r: 0, g: 0, b: 0, a: 0, size: 0 };
+  const order = new Array(N);
+  for (let i = 0; i < N; i++) order[i] = i;
+
+  // fixed light direction (camera space) - gives the reference image's
+  // off-center dark/violet cluster that stays put while the lattice
+  // rotates and ripples underneath it.
+  let LX = 0.22, LY = 0.34, LZ = -0.95;
+  const LLEN = Math.sqrt(LX * LX + LY * LY + LZ * LZ);
+  LX /= LLEN; LY /= LLEN; LZ /= LLEN;
+
+  // localized colour accents (magenta patch + subtle teal/blue sliver)
+  let MX = -0.55, MY = 0.35, MZ = -0.7;
+  const MLEN = Math.sqrt(MX * MX + MY * MY + MZ * MZ);
+  MX /= MLEN; MY /= MLEN; MZ /= MLEN;
+
+  let BX = 0.65, BY = -0.15, BZ = -0.55;
+  const BLEN = Math.sqrt(BX * BX + BY * BY + BZ * BZ);
+  BX /= BLEN; BY /= BLEN; BZ /= BLEN;
+
+  // lobe-bump directions for the lumpy, slowly morphing silhouette
+  const NB = 9;
+  const bumps = [];
+  for (let k = 0; k < NB; k++) {
+    const yy = 1 - (k / (NB - 1)) * 2;
+    const ra = Math.sqrt(Math.max(0, 1 - yy * yy));
+    const th = GOLDEN * k;
+    bumps.push({ x: Math.cos(th) * ra, z: Math.sin(th) * ra, y: yy, phase: k * 1.9 });
+  }
+
+  const BASE_RADIUS = () => Math.min(W, H) * 0.30;
+  const FOCAL = () => Math.min(W, H) * 1.75;
+
+  function frame(now) {
+    const time = now / 1000;
+
+    const R = BASE_RADIUS();
+    const D = FOCAL();
+
+    const rotY = time * 0.15;
+    const rotX = Math.sin(time * 0.13) * 0.25;
+    const rotZ = Math.sin(time * 0.09 + 1.3) * 0.06;
+    const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+    const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+    const cosZ = Math.cos(rotZ), sinZ = Math.sin(rotZ);
+
+    const colorPhase = time * 0.15;
+
+    // precompute bump amplitudes for this frame
+    const bumpAmp = new Array(NB);
+    for (let k = 0; k < NB; k++) {
+      bumpAmp[k] = 0.11 + 0.035 * Math.sin(time * 0.15 + bumps[k].phase);
+    }
+
+    for (let i = 0; i < N; i++) {
+      const p = points[i];
+
+      let x1 = p.ux * cosY + p.uz * sinY;
+      let z1 = -p.ux * sinY + p.uz * cosY;
+      let y1 = p.uy;
+
+      let y2 = y1 * cosX - z1 * sinX;
+      let z2 = y1 * sinX + z1 * cosX;
+      let x2 = x1;
+
+      const xr = x2 * cosZ - y2 * sinZ;
+      const yr = x2 * sinZ + y2 * cosZ;
+      x2 = xr; y2 = yr;
+
+      // lumpy silhouette: sum of slowly-morphing directional bumps
+      let bump = 0;
+      for (let k = 0; k < NB; k++) {
+        const bk = bumps[k];
+        const d = x2 * bk.x + y2 * bk.y + z2 * bk.z;
+        bump += bumpAmp[k] * Math.exp((d - 1.0) * 2.0);
+      }
+
+      const n1 = noise3(x2 * 2.4 + time * 0.3, y2 * 2.4, z2 * 2.4 + time * 0.2);
+      const n2 = noise3(x2 * 6.0, y2 * 6.0 + time * 0.4, z2 * 6.0);
+      const disp = bump + n1 * 0.035 + n2 * 0.015;
+      const r = R * (1 + disp);
+
+      const px = x2 * r;
+      const py = y2 * r;
+      const pz = z2 * r;
+
+      const scale = D / (D + pz);
+      const o = proj[i];
+      o.sx = CX + px * scale;
+      o.sy = CY - py * scale;
+      o.pz = pz;
+
+      let sz = p.sizeVar * scale * (R * 0.017);
+      if (sz < 0.6) sz = 0.6;
+      if (sz > 3.0) sz = 3.0;
+      o.size = sz;
+
+      // fixed-light rim shading: facing the light = dark core,
+      // grazing the light = bright orange rim.
+      const facing = x2 * LX + y2 * LY + z2 * LZ;
+      const swirl = noise3(
+        x2 * 1.3 + colorPhase,
+        y2 * 1.3 - colorPhase * 0.6,
+        z2 * 1.3 + colorPhase * 0.7
+      ) * 0.12;
+
+      let tRaw = (1 - facing - 0.30) / 0.70;
+      tRaw = tRaw < 0 ? 0 : tRaw > 1 ? 1 : tRaw;
+      let tColor = Math.pow(tRaw, 1.25) + swirl;
+      tColor = tColor < 0 ? 0 : tColor > 1 ? 1 : tColor;
+
+      const col = getColor(tColor);
+      let cr = col[0], cg = col[1], cb = col[2];
+
+      // localized magenta accent patch
+      const md = x2 * MX + y2 * MY + z2 * MZ;
+      let mw = Math.exp((md - 1.0) * 5.0) * 0.55;
+      if (mw > 1) mw = 1;
+      cr = cr * (1 - mw) + 225 * mw;
+      cg = cg * (1 - mw) + 45 * mw;
+      cb = cb * (1 - mw) + 140 * mw;
+
+      // subtle teal/blue rim accent
+      const bd = x2 * BX + y2 * BY + z2 * BZ;
+      let bw = Math.exp((bd - 1.0) * 6.0) * 0.25;
+      if (bw > 1) bw = 1;
+      cr = cr * (1 - bw) + 120 * bw;
+      cg = cg * (1 - bw) + 170 * bw;
+      cb = cb * (1 - bw) + 230 * bw;
+
+      o.r = cr; o.g = cg; o.b = cb;
+
+      const camFacing = -z2;
+      const depthT = (camFacing + 1) / 2;
+      o.a = 0.68 + depthT * 0.32;
+    }
+
+    order.sort((a, b) => proj[b].pz - proj[a].pz);
+
+    // ---- crisp render onto the offscreen buffer ----
+    bctx.globalCompositeOperation = "source-over";
+    bctx.fillStyle = "#000000";
+    bctx.fillRect(0, 0, W, H);
+
+    for (let k = 0; k < N; k++) {
+      const o = proj[order[k]];
+      const rad = o.size * 1.15;
+      const cr = Math.round(o.r), cg = Math.round(o.g), cb = Math.round(o.b);
+      bctx.fillStyle = `rgba(${cr},${cg},${cb},${o.a})`;
+      bctx.beginPath();
+      bctx.arc(o.sx, o.sy, rad, 0, Math.PI * 2);
+      bctx.fill();
+    }
+
+    // ---- composite: crisp base + a small soft bloom (kept subtle) ----
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+    ctx.filter = "none";
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(buffer, 0, 0);
+
+    ctx.save();
+    ctx.filter = "blur(4px)";
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 0.18;
+    ctx.drawImage(buffer, 0, 0);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

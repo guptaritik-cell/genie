@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POPgenie Interface</title>
+    <style>
+        /* Base page styling for presentation */
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #0d0d0d;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* The Mobile Device Screen Container */
+        .mobile-screen {
+            width: 390px;
+            height: 844px;
+            /* Updated background image */
+            background-image: url('src/assets/background.png');
+            background-size: cover;
+            background-position: center;
+            border-radius: 40px;
+            border: 8px solid #1a1a1a;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            opacity: 0.8;
+        }
+
+        /* 1. The Background Animation Layer */
+        .orb-wrapper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1; /* Keep behind UI */
+            pointer-events: none; /* Let clicks pass through to the UI */
+            
+            /* Adds 3D depth to the container so X/Y rotations look real */
+            perspective: 800px; 
+        }
+
+        .rotating-orb {
+            /* Zoomed out the orb by reducing the width */
+            width: 500px; 
+            height: auto;
+            
+            /* Removes the black background from the image */
+            mix-blend-mode: screen; 
+            
+            opacity: 0.4; /* Slightly reduced opacity for a more subtle effect */
+            
+            /* Adds a very subtle glowing aura behind it */
+            filter: drop-shadow(0 0 15px rgba(255, 85, 51, 0.3));
+            
+            /* 3D rotation speed and easing */
+            animation: organic-3d-spin 35s ease-in-out infinite;
+        }
+
+        /* The 3D "Breathing" Animation */
+        @keyframes organic-3d-spin {
+            0% { 
+                transform: rotateZ(0deg) rotateX(0deg) rotateY(0deg) scale(1); 
+            }
+            33% { 
+                /* Tilts forward and right, pulses slightly larger */
+                transform: rotateZ(120deg) rotateX(15deg) rotateY(-10deg) scale(1.05); 
+            }
+            66% { 
+                /* Tilts backward and left, pulses slightly smaller */
+                transform: rotateZ(240deg) rotateX(-10deg) rotateY(15deg) scale(0.97); 
+            }
+            100% { 
+                transform: rotateZ(360deg) rotateX(0deg) rotateY(0deg) scale(1); 
+            }
+        }
+
+        /* 2. The Static UI Overlay Layer */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            padding: 25px 20px 35px 20px;
+        }
+
+        /* Top Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .coin-badge {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            backdrop-filter: blur(5px);
+        }
+
+        .coin-icon {
+            width: 14px;
+            height: 14px;
+            background: #ff5533;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: inset -2px -2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Top Chat Bubble */
+        .top-bubble {
+            background: rgba(20, 20, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: #999;
+            padding: 20px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.5;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Middle Content (Pushes to the bottom) */
+        .middle-content {
+            margin-top: auto;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: white;
+            font-size: 19px;
+            text-align: center;
+            line-height: 1.4;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        /* Option Pills */
+        .pill-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .pill {
+            background: #242424;
+            color: #ddd;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .pill:hover {
+            background: #333;
+        }
+
+        /* Bottom Input */
+        .input-box {
+            background: rgba(25, 25, 25, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            min-height: 50px;
+            backdrop-filter: blur(10px);
+        }
+
+        .input-text {
+            color: #666;
+            font-size: 15px;
+            margin-bottom: 5px;
+        }
+
+        .send-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #888;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-screen">
+        
+        <!-- LAYER 1: The Rotating Orb in Background -->
+        <div class="orb-wrapper">
+            <img src="src/assets/image 25904.svg" alt="Glowing Orb" class="rotating-orb" />
+        </div>
+
+        <!-- LAYER 2: The Static UI -->
+        <div class="ui-layer">
+            
+            <!-- Header -->
+            <div class="header">
+                <button class="icon-btn">❮</button>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="font-weight: bold; letter-spacing: -2px;">==</div>
+                    <div class="coin-badge">
+                        <span class="coin-icon"></span> 2.9k
+                    </div>
+                </div>
+            </div>
+
+            <!-- Intro Text Bubble -->
+            <div class="top-bubble">
+                Discover the perfect blend of comfort and style with our newest range of shirts, designed to elevate your wardrobe for any occasion. Whether you're dressing up for a formal event or keeping it casual for
+            </div>
+
+            <!-- Interactive Section -->
+            <div class="middle-content">
+                <h1>Hey Mark, pick options that best suit you so i can start suggesting you products. You can select multiple.</h1>
+                
+                <div class="pill-container">
+                    <div class="pill">Formal</div>
+                    <div class="pill">Casual</div>
+                    <div class="pill">Checked</div>
+                    <div class="pill">Printed</div>
+                    <div class="pill">Formal</div>
+                    <div class="pill">Printed</div>
+                    <div class="pill">Casual</div>
+                    <div class="pill">Checked</div>
+                </div>
+            </div>
+
+            <!-- Bottom Chat Input -->
+            <div class="input-box">
+                <div class="input-text">Chat with POPgenie</div>
+                <button class="send-btn">↑</button>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
