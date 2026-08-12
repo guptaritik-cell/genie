@@ -484,7 +484,15 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
   const visibleCards = cards.slice(0, 4);
 
   return (
-    <div className="bg-[#0D0D0D] relative overflow-hidden flex flex-col justify-between" style={{ height: "100%", width: "100%" }}>
+    <div 
+      className="bg-[#0D0D0D] relative overflow-hidden flex flex-col justify-between" 
+      style={{ 
+        height: "100%", 
+        width: "100%",
+        userSelect: "none",
+        WebkitUserSelect: "none"
+      }}
+    >
       <style>{`
         .shadow-2xl {
           --tw-shadow: 0 25px 80px 2px var(--tw-shadow-color, rgb(0 0 0 / 0.95)), var(--tw-shadow-glow, 0 0 #0000);
@@ -511,7 +519,12 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
       />
 
       {/* TOP HEADER */}
-      <div className="flex justify-between items-center px-4 pt-12 pb-2 relative z-10 w-full">
+      <div 
+        className="flex justify-between items-center px-4 pb-2 relative z-10 w-full"
+        style={{
+          paddingTop: "calc(16px + env(safe-area-inset-top, 0px))"
+        }}
+      >
         <button onClick={onBack} className="flex items-center justify-center w-10 h-10 rounded-full border border-white/10 bg-black/20" style={{ cursor: "pointer" }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M18 6L6 18M6 6L18 18" stroke="#E6E6E6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -553,7 +566,7 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
             <p className="font-['Figtree'] text-xs text-[#8C8C8C] max-w-[200px]">We have custom-tailored suggestions ready for you based on your swipes!</p>
           </div>
         ) : (
-          <div className="relative w-[310px] h-[390px] select-none flex items-center justify-center overflow-visible">
+          <div className="relative w-[310px] h-[390px] card-stack-container select-none flex items-center justify-center overflow-visible">
             {visibleCards.map((card, idx) => {
               let stackIdx = idx;
               if (undoing) stackIdx = idx - 1;
@@ -659,7 +672,12 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
       </div>
 
       {/* BOTTOM CONTROLS */}
-      <div className="flex flex-col items-center justify-center pb-8 pt-2 relative z-10 shrink-0 select-none">
+      <div 
+        className="flex flex-col items-center justify-center pt-2 relative z-10 shrink-0 select-none"
+        style={{
+          paddingBottom: "calc(16px + env(safe-area-inset-bottom, 0px))"
+        }}
+      >
         <div className="flex items-center justify-center gap-6 mb-4">
           <button
             onClick={() => {

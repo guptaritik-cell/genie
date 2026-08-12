@@ -114,3 +114,39 @@ body {
   border-radius: 27px; /* slightly smaller than outer border-radius */
 }
 
+/* Mobile Responsiveness: Strip mock bezel & borders under 500px screen width */
+@media (max-width: 500px) {
+  .phone-frame-container {
+    padding: 0 !important;
+    background: #0d0d0d !important;
+  }
+  .phone-frame-inner {
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Short Screen Support: Scale card stack down slightly on shorter viewport heights to prevent vertical crowding */
+@media (max-height: 740px) {
+  .card-stack-container {
+    transform: scale(0.9);
+    transform-origin: center;
+  }
+}
+@media (max-height: 680px) {
+  .card-stack-container {
+    transform: scale(0.82);
+    transform-origin: center;
+  }
+}
+
+/* Tap highlight & User selection improvements */
+button, [role="button"], a, select, input, textarea, .clickable-chip {
+  -webkit-tap-highlight-color: transparent;
+}
+
+

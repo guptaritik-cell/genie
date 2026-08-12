@@ -8,6 +8,7 @@ const DEVICE_HEIGHT = 844;
 export function PhoneFrame({ children }: { children: ReactNode }) {
   return (
     <div
+      className="phone-frame-container"
       style={{
         minHeight: "100dvh",
         width: "100%",
@@ -19,6 +20,7 @@ export function PhoneFrame({ children }: { children: ReactNode }) {
       }}
     >
       <div
+        className="phone-frame-inner"
         style={{
           position: "relative",
           width: DEVICE_WIDTH,

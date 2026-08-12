@@ -55,7 +55,13 @@ function ChatTopBar({
     balance >= 1000 ? `${(balance / 1000).toFixed(1)}k` : String(balance);
 
   return (
-    <div className="absolute content-stretch flex flex-col items-start left-0 right-0 overflow-clip top-0 z-20">
+    <div 
+      className="absolute content-stretch flex flex-col items-start left-0 right-0 overflow-clip z-20"
+      style={{
+        top: 0,
+        paddingTop: "env(safe-area-inset-top, 0px)",
+      }}
+    >
       <div className="flex gap-[8px] h-[48px] items-center px-[12px] relative shrink-0 w-full">
 
         {/* Back button */}
@@ -156,7 +162,7 @@ function ChatInputCard() {
     <div
       className="absolute left-1/2"
       style={{
-        bottom: "24px",
+        bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
         transform: "translateX(-50%)",
         width: "369px",
         maxWidth: "calc(100% - 24px)",
@@ -315,6 +321,7 @@ function PreferenceChip({
     <div
       key={id}
       onClick={onClick}
+      className="clickable-chip"
       style={{
         display: "flex",
         alignItems: "center",
@@ -327,6 +334,8 @@ function PreferenceChip({
           ? "chip-pop 450ms cubic-bezier(0.5, 0, 0.5, 1)"
           : "none",
         willChange: isAnimating ? "transform" : "auto",
+        userSelect: "none",
+        WebkitUserSelect: "none",
       }}
     >
       <div
@@ -444,10 +453,10 @@ export function PreferenceClarifyScreen({ onProceed }: { onProceed?: () => void 
       <div
         className="absolute overflow-y-auto overflow-x-hidden scrollbar-hide"
         style={{
-          top: "92px",
+          top: "calc(92px + env(safe-area-inset-top, 0px))",
           left: "12px",
           width: "calc(100% - 24px)",
-          bottom: "144px",
+          bottom: "calc(144px + env(safe-area-inset-bottom, 0px))",
           display: "flex",
           flexDirection: "column",
           zIndex: 5,
