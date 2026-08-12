@@ -337,6 +337,7 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
   const dragX = useRef(0);
   const dragY = useRef(0);
   const cardRef = useRef<HTMLDivElement>(null);
+  const hasTriggeredHaptic = useRef(false);
 
   // Original exact animation speed retained
   const SWIPE_ANIMATION_DURATION = 600; 
@@ -347,7 +348,17 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
 
     const topCard = cards[0];
     const startX = dragX.current;
-    const startY = dragY.current * 0.4;
+    
+    // Apply standard rubber-band limit matching the bounded dragging boundary
+    const rawY = dragY.current * 0.4;
+    const MAX_Y_LIMIT = 40;
+    let startY = rawY;
+    if (Math.abs(rawY) > MAX_Y_LIMIT) {
+      const sign = rawY > 0 ? 1 : -1;
+      const overflow = Math.abs(rawY) - MAX_Y_LIMIT;
+      startY = sign * (MAX_Y_LIMIT + Math.log10(1 + overflow) * 8);
+    }
+
     const startRot = Math.min(15, Math.max(-15, (dragX.current / 160) * 15));
     const startGrayscale = startX < 0 ? Math.min(100, (Math.abs(startX) / 80) * 100) : 0;
 
@@ -425,6 +436,7 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
   const handlePointerDown = (e: React.PointerEvent) => {
     if (undoing || cards.length === 0) return;
     setIsDragging(true);
+    hasTriggeredHaptic.current = false;
     startPos.current = { x: e.clientX, y: e.clientY };
     if (cardRef.current) {
       cardRef.current.setPointerCapture(e.pointerId);
@@ -437,12 +449,34 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
     dragY.current = e.clientY - startPos.current.y;
 
     const x = dragX.current;
-    const y = dragY.current;
+    const rawY = dragY.current * 0.4;
     
+    // Strict vertical drag limit before elastic resistance starts
+    const MAX_Y_LIMIT = 40;
+    let finalY = rawY;
+
+    if (Math.abs(rawY) > MAX_Y_LIMIT) {
+      const sign = rawY > 0 ? 1 : -1;
+      const overflow = Math.abs(rawY) - MAX_Y_LIMIT;
+      // High-end elastic rubber-banding resistance
+      finalY = sign * (MAX_Y_LIMIT + Math.log10(1 + overflow) * 8);
+
+      // Trigger standard physical haptic feedback when crossing the boundary
+      if (!hasTriggeredHaptic.current) {
+        if (typeof navigator !== "undefined" && navigator.vibrate) {
+          navigator.vibrate(15);
+        }
+        hasTriggeredHaptic.current = true;
+      }
+    } else {
+      // Reset haptic state when returning within bounds to allow another buzz
+      hasTriggeredHaptic.current = false;
+    }
+
     const rotateAngle = Math.min(15, Math.max(-15, (x / 160) * 15));
 
     if (cardRef.current) {
-      cardRef.current.style.transform = `translate3d(${x}px, ${y * 0.4}px, 0) rotate(${rotateAngle}deg)`;
+      cardRef.current.style.transform = `translate3d(${x}px, ${finalY}px, 0) rotate(${rotateAngle}deg)`;
       cardRef.current.style.transition = "none";
       
       const grayscaleValue = x < 0 ? Math.min(100, (Math.abs(x) / 80) * 100) : 0;
