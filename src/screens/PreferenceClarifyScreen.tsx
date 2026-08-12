@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import popCoinIcon from "@/assets/pop-coin.png";
-import chatBg from "@/assets/chat/chat-bg.png";
+import chatBg from "@/assets/chat/chat-bgdd.png";
 import sendIconStroke from "@/assets/chat/s4b-icon-stroke1.svg";
 
 // ─── Adapted from Genie-shared-new_ui_for_later_merge/src/routes/chat.tsx ─────
@@ -402,9 +402,9 @@ export function PreferenceClarifyScreen({ onProceed }: { onProceed?: () => void 
     onProceed?.();
   };
 
-  const handleSkip = () => {
-    console.log("Skipped");
-  };
+  // const handleSkip = () => {
+  //   console.log("Skipped");
+  // };
 
   return (
     <div
@@ -491,7 +491,7 @@ export function PreferenceClarifyScreen({ onProceed }: { onProceed?: () => void 
             flexDirection: "column",
             position: "relative",
             marginTop: "auto",
-            paddingBottom: hasSelection ? "60px" : "12px",
+            paddingBottom: hasSelection ? "20px" : "12px",
             transition: `padding-bottom ${SYMMETRIC_TIMING}`,
           }}
         >
@@ -508,12 +508,12 @@ export function PreferenceClarifyScreen({ onProceed }: { onProceed?: () => void 
             <p
               style={{
                 fontFamily: "Figtree",
-                fontWeight: 600,
+                fontWeight: 450,
                 fontSize: "20px",
                 lineHeight: "27px",
                 color: "#FFFFFF",
                 textAlign: "center",
-                margin: "80px 0 40px",
+                margin: "80px 0 30px",
               }}
             >
               {CLARIFY_TITLE_LINE1}
@@ -534,7 +534,7 @@ export function PreferenceClarifyScreen({ onProceed }: { onProceed?: () => void 
                 style={{
                   display: "flex",
                   flexDirection: "row",
-                  gap: "8px",
+                  gap: "0px",
                   alignItems: "center",
                   overflowX: "scroll",
                   overflowY: "hidden",
@@ -544,7 +544,7 @@ export function PreferenceClarifyScreen({ onProceed }: { onProceed?: () => void 
                   marginRight: "-12px",
                   paddingLeft: "12px",
                   paddingRight: "12px",
-                  paddingTop: "6px",
+                  paddingTop: "1px",
                   paddingBottom: "6px",
                 }}
               >
@@ -570,7 +570,7 @@ export function PreferenceClarifyScreen({ onProceed }: { onProceed?: () => void 
                 style={{
                   display: "flex",
                   flexDirection: "row",
-                  gap: "8px",
+                  gap: "0px",
                   alignItems: "center",
                   overflowX: "scroll",
                   overflowY: "hidden",
@@ -580,7 +580,7 @@ export function PreferenceClarifyScreen({ onProceed }: { onProceed?: () => void 
                   marginRight: "-12px",
                   paddingLeft: "12px",
                   paddingRight: "12px",
-                  paddingTop: "6px",
+                  paddingTop: "0px",
                   paddingBottom: "6px",
                 }}
               >
@@ -692,7 +692,7 @@ export function PreferenceClarifyScreen({ onProceed }: { onProceed?: () => void 
                 </span>
               </button>
 
-              <button
+              {/* <button
                 onClick={handleSkip}
                 style={{
                   background: "none",
@@ -715,7 +715,7 @@ export function PreferenceClarifyScreen({ onProceed }: { onProceed?: () => void 
                 }}
               >
                 Skip
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
