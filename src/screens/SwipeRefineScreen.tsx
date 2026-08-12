@@ -346,6 +346,11 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
   const executeSwipe = (direction: "left" | "right") => {
     if (cards.length === 0 || undoing) return;
 
+    // Trigger standard haptic vibration for successful swipe registration
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(20);
+    }
+
     const topCard = cards[0];
     const startX = dragX.current;
     
