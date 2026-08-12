@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import popCoinIcon from "@/assets/pop-coin.png";
-import chatBg from "@/assets/chat/chat-bgd.png";
+import chatBg from "@/assets/chat/chat-b.png";
 import swipeIcon from "@/assets/swipe.svg";
 
 // Import your trend images from the assets folder
@@ -186,17 +186,6 @@ const OrganicMeshCloud = React.memo(function OrganicMeshCloud() {
 /* -------------------------------------------------------------------------- */
 /*                              ANIMATED COUNTER                              */
 /* -------------------------------------------------------------------------- */
-/* 
-  WHAT IT IS & WHERE IT IS:
-  - This custom component renders a vertical scrolling ticker animation for numbers.
-  - Useful for remaining swipe counters (e.g. "3 right swipes to refine").
-  
-  WHAT HAPPENS IF CHANGED:
-  - 'value': Changing the input value animates the vertical scroll position of numbers using a CSS transform.
-  - 'lineHeight' / 'height' / 'translateY': The numbers translate vertically in increments of 18px (lineHeight).
-    Changing lineHeight requires updating both the CSS heights and the translateY math accordingly.
-  - 'color', 'fontWeight', 'fontSize': Allow dynamic custom styling of the ticker digits.
-*/
 interface AnimatedCounterProps {
   value: number;
   color?: string;
@@ -260,16 +249,6 @@ function AnimatedCounter({
 /* -------------------------------------------------------------------------- */
 /*                            CARD INNER CONTENT                              */
 /* -------------------------------------------------------------------------- */
-/*
-  WHAT IT IS & WHERE IT IS:
-  - Renders the aesthetic layout inside each card.
-  - Differentiates between 'Instruction Card' (OrganicMeshCloud + tutorial text)
-    and 'Product Card' (images, discounts, prices, brand labels, and popcoin values).
-  
-  WHAT HAPPENS IF CHANGED:
-  - Re-used both in the live interactive cards and the flying exit animations.
-  - Modifying text or styling here will update BOTH active cards and currently exiting cards.
-*/
 function renderCardInner(card: ProductCard) {
   if (card.isInstruction) {
     return (
@@ -329,11 +308,6 @@ function renderCardInner(card: ProductCard) {
   );
 }
 
-/*
-  EXITING CARD TYPE DEFINITION:
-  - Stores coordinate information, rotation angles, and direction of swiped cards.
-  - This allows exit flight animations to trigger exactly from where the user released the card.
-*/
 interface ExitingCard {
   card: ProductCard;
   direction: "left" | "right";
@@ -342,23 +316,17 @@ interface ExitingCard {
   startY: number;
   startRot: number;
   startGrayscale: number;
+  animating: boolean;
 }
 
 /* -------------------------------------------------------------------------- */
-/*                            MAIN COMPONENT                                  */
+/*                              MAIN COMPONENT                                */
 /* -------------------------------------------------------------------------- */
-/*
-  CORE ARCHITECTURE & STATE FLOW:
-  - 'cards': The active queue of items. Sliced immediately upon swipe to make the next card active and interactive.
-  - 'exitingCards': An isolated visual-only overlay state keeping swiped cards animated in flight.
-    This solves interaction locks, allowing rapid consecutive swiping.
-  - 'rightSwipeCount': Tracks user preferences to update progress arcs and button modes dynamically.
-*/
 export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
   const [cards, setCards] = useState<ProductCard[]>(INITIAL_CARDS);
   const [history, setHistory] = useState<{ card: ProductCard; direction: "left" | "right" }[]>([]);
   const [rightSwipeCount, setRightSwipeCount] = useState<number>(0);
-  const [swipedProductCount, setSwipedProductCount] = useState<number>(0);
+  const [, setSwipedProductCount] = useState<number>(0);
   const [hasSwipedFirstCard, setHasSwipedFirstCard] = useState<boolean>(false);
 
   const [exitingCards, setExitingCards] = useState<ExitingCard[]>([]);
@@ -370,24 +338,10 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
   const dragY = useRef(0);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  /*
-    KEY TIMING CONSTANTS:
-    - 'SWIPE_ANIMATION_DURATION': Flight duration (in ms) of swiped card off screen. 
-      Changing this updates CSS animation and triggers card cleanup. Perfect at 650ms.
-    - 'easing': Controls fluid ease-out motion during exit flights.
-  */
-  const SWIPE_ANIMATION_DURATION = 1950; 
+  // Original exact animation speed retained
+  const SWIPE_ANIMATION_DURATION = 600; 
   const easing = "cubic-bezier(0.25, 1, 0.5, 1)";
 
-  /*
-    SWIPING LOGIC ('executeSwipe'):
-    - This function is triggered by button clicks OR pointer releases exceeding threshold.
-    - WHAT IT DOES: 
-      1. Computes launch parameters (startX, startY, startRot) based on drag offsets.
-      2. Appends card into 'exitingCards' for physical render flight.
-      3. Slices the active 'cards' array immediately, making the next card interactive without delay.
-      4. Cleans up exiting cards from memory after 'SWIPE_ANIMATION_DURATION' passes.
-  */
   const executeSwipe = (direction: "left" | "right") => {
     if (cards.length === 0 || undoing) return;
 
@@ -398,20 +352,21 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
     const startGrayscale = startX < 0 ? Math.min(100, (Math.abs(startX) / 80) * 100) : 0;
 
     const exitId = `${topCard.id}-${Date.now()}`;
-    setExitingCards((prev) => [
-      ...prev,
-      {
-        card: topCard,
-        direction,
-        id: exitId,
-        startX,
-        startY,
-        startRot,
-        startGrayscale,
-      }
-    ]);
+    
+    // Add item to exiting overlay starting directly at current touch/mouse coordinates
+    const newExitingCard: ExitingCard = {
+      card: topCard,
+      direction,
+      id: exitId,
+      startX,
+      startY,
+      startRot,
+      startGrayscale,
+      animating: false,
+    };
 
-    // Update stack and history immediately
+    setExitingCards((prev) => [...prev, newExitingCard]);
+
     setCards((prev) => prev.slice(1));
     setHistory((prev) => [{ card: topCard, direction }, ...prev]);
 
@@ -424,19 +379,23 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
       }
     }
 
-    // Reset drag offsets instantly
     dragX.current = 0;
     dragY.current = 0;
+
+    // Trigger flight on next frame to ensure zero jerk from release position
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setExitingCards((prev) =>
+          prev.map((item) => (item.id === exitId ? { ...item, animating: true } : item))
+        );
+      });
+    });
 
     setTimeout(() => {
       setExitingCards((prev) => prev.filter((item) => item.id !== exitId));
     }, SWIPE_ANIMATION_DURATION);
   };
 
-  /*
-    UNDO LOGIC ('handleUndo'):
-    - Reverts the last swipe action, restoring the swiped card back to the top of the queue.
-  */
   const handleUndo = () => {
     if (history.length === 0 || !hasSwipedFirstCard || undoing) return;
     const lastAction = history[0];
@@ -463,12 +422,6 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
     });
   };
 
-  /*
-    POINTER EVENT HANDLERS (DRAGGING STYLES & GESTURES):
-    - PointerDown, PointerMove, PointerUp capture real-time mouse/touch coordinates.
-    - Modifies inline transforms on the cardRef directly for maximum rendering performance.
-    - 'threshold' (80px): Dragging a card horizontally beyond this pixel value commits a swipe.
-  */
   const handlePointerDown = (e: React.PointerEvent) => {
     if (undoing || cards.length === 0) return;
     setIsDragging(true);
@@ -492,9 +445,9 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
       cardRef.current.style.transform = `translate3d(${x}px, ${y * 0.4}px, 0) rotate(${rotateAngle}deg)`;
       cardRef.current.style.transition = "none";
       
-      // Dynamically turn black-and-white (grayscale) on left drag
       const grayscaleValue = x < 0 ? Math.min(100, (Math.abs(x) / 80) * 100) : 0;
       cardRef.current.style.filter = `grayscale(${grayscaleValue}%)`;
+      cardRef.current.style.opacity = "1";
     }
   };
 
@@ -516,6 +469,7 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
       if (cardRef.current) {
         cardRef.current.style.transform = `translate3d(0, 0, 0) rotate(0deg)`;
         cardRef.current.style.filter = "grayscale(0%)";
+        cardRef.current.style.opacity = "1";
         cardRef.current.style.transition = `transform ${SWIPE_ANIMATION_DURATION}ms ${easing}, filter ${SWIPE_ANIMATION_DURATION}ms ${easing}`;
       }
     }
@@ -526,86 +480,18 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - progressRatio * circumference;
   
-  // Middle button changes to Arrow after 3 right swipes
   const isProceedArrowReady = rightSwipeCount >= 3;
-
   const visibleCards = cards.slice(0, 4);
 
-  /*
-    ANIMATION KEYFRAMES LAYER:
-    - Embedded dynamically to support precise, fluid flyout curves originating from the drag coordinates.
-  */
   return (
     <div className="bg-[#0D0D0D] relative overflow-hidden flex flex-col justify-between" style={{ height: "100%", width: "100%" }}>
       <style>{`
-        /*
-          TAILWIND SHADOW OVERRIDE (shadow-2xl):
-          Tailwind handles '.shadow-2xl' dynamically, meaning it isn't normally written in our code.
-          We have overridden it here so you can easily change the opacity/color!
-          
-          CHANGE VALUE: Change the '0.25' below (e.g. to '0.45' for a darker shadow or '0.15' for a softer one).
-
-          BOTTOM SHADOW IS UNTOUCHED: the first shadow layer below (the '0 25px 80px -12px ...' one)
-          is exactly what it was before. The second layer just plugs in the red glow from
-          '.shadow-top-left-right' (see below) when that class is also applied to the same
-          element. If '.shadow-top-left-right' isn't applied, that layer falls back to a fully
-          transparent '0 0 #0000' and has zero visual effect, so '.shadow-2xl' on its own looks
-          identical to before.
-        */
         .shadow-2xl {
-          --tw-shadow: 0 25px 80px -12px var(--tw-shadow-color, rgb(0 0 0 / 0.95)), var(--tw-shadow-glow, 0 0 #0000);
+          --tw-shadow: 0 25px 80px 2px var(--tw-shadow-color, rgb(0 0 0 / 0.95)), var(--tw-shadow-glow, 0 0 #0000);
           box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
         }
-          
-        /*
-          NEW CUSTOM SHADOW (shadow-top-left-right):
-          Add this class ALONGSIDE '.shadow-2xl' on any card element
-          (e.g. className="... shadow-2xl shadow-top-left-right ...") to add a red glow around
-          the TOP, LEFT, and RIGHT edges, leaving the bottom shadow from '.shadow-2xl' completely
-          untouched.
-
-          VALUES BELOW ARE TAKEN DIRECTLY FROM THE FIGMA "Drop shadow" PANEL:
-            Position X: 0        -> offset-x
-            Position Y: -44.74   -> offset-y  (negative = shadow sits ABOVE the card)
-            Blur:       126.3    -> blur-radius
-            Spread:     -9.22    -> spread-radius
-            Color:      #E80B03 @ 50% -> rgba(232, 11, 3, 0.5)
-          FORMAT: offset-x  offset-y  blur-radius  spread-radius  color
-
-          TO RE-TUNE FROM FIGMA: just re-read the four fields in the Figma "Drop shadow" panel
-          and drop them into the same four slots below, same units (px), same order.
-        */
         .shadow-top-left-right {
           --tw-shadow-glow: 0px -44.74px 126.3px -9.22px rgba(232, 11, 3, 0.5);
-        }
-
-        @keyframes swipeOutRight {
-          from {
-            transform: translate3d(var(--exit-start-x), var(--exit-start-y), 0) rotate(var(--exit-start-rot));
-            opacity: 1;
-          }
-          to {
-            transform: translate3d(150%, 15%, 0) rotate(15deg);
-            opacity: 0;
-          }
-        }
-        @keyframes swipeOutLeft {
-          from {
-            transform: translate3d(var(--exit-start-x), var(--exit-start-y), 0) rotate(var(--exit-start-rot));
-            filter: grayscale(var(--exit-start-grayscale, 0%));
-            opacity: 1;
-          }
-          to {
-            transform: translate3d(-150%, 15%, 0) rotate(-15deg);
-            filter: grayscale(100%);
-            opacity: 0;
-          }
-        }
-        .animate-swipe-right {
-          animation: swipeOutRight ${SWIPE_ANIMATION_DURATION}ms ${easing} forwards;
-        }
-        .animate-swipe-left {
-          animation: swipeOutLeft ${SWIPE_ANIMATION_DURATION}ms ${easing} forwards;
         }
       `}</style>
 
@@ -648,14 +534,14 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
         <h1 className="text-4xl text-[#FFFFFF] select-none" style={{ fontFamily: "'Awesome Serif Italic', serif", fontStyle: "italic", fontWeight: 700 }}>
           Swipe to refine
         </h1>
-        <p className="font-['Figtree'] text-[13px] text-[#8C8C8C] mt-1 select-none">
+        <p className="font-['Figtree'] text-[13px] text-white mt-1 select-none">
           Every right swipe tells us what you love
         </p>
       </div>
 
       {/* CARD STACK AREA */}
       <div className="relative flex-1 flex items-center justify-center px-4 select-none mt-2 mb-2 z-10 overflow-visible">
-        {cards.length === 0 ? (
+        {cards.length === 0 && exitingCards.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center px-6 py-12 rounded-[16px] border border-white/10 bg-black/40 backdrop-blur-md w-[310px] h-[390px] z-10 shadow-2xl shadow-top-left-right">
             <div className="w-16 h-16 rounded-full bg-orange-500/10 flex items-center justify-center mb-4 border border-orange-500/30">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
@@ -678,10 +564,10 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
               const translateY = isTop ? 0 : stackIdx * 20;
               const containerOpacity = stackIdx >= 3 ? 0 : 1;
               const depthDarkness = stackIdx === 0 ? 0 : Math.min(0.65, stackIdx * 0.25);
-
+               const come_up = 350; 
               let filterStyle = "grayscale(0%)";
               let transformStyle = `translate3d(0px, ${translateY}px, 0) scale(${scale}) rotate(0deg)`;
-              let transitionStyle = `transform ${SWIPE_ANIMATION_DURATION}ms ${easing}, opacity ${SWIPE_ANIMATION_DURATION}ms ${easing}, filter ${SWIPE_ANIMATION_DURATION}ms ${easing}`;
+              let transitionStyle = `transform ${come_up}ms ${easing}, opacity ${come_up}ms ${easing}, filter ${come_up}ms ${easing}`;
 
               if (isTop) {
                 if (undoing === "left") {
@@ -732,27 +618,42 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
               );
             })}
 
-            {/* EXITING CARDS ANIMATION LAYER */}
-            {exitingCards.map((exit) => (
-              <div
-                key={exit.id}
-                className={`absolute rounded-[16px] overflow-hidden select-none shadow-2xl shadow-top-left-right bg-black pointer-events-none ${
-                  exit.direction === "right" ? "animate-swipe-right" : "animate-swipe-left"
-                }`}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  zIndex: 50,
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  "--exit-start-x": `${exit.startX}px`,
-                  "--exit-start-y": `${exit.startY}px`,
-                  "--exit-start-rot": `${exit.startRot}deg`,
-                  "--exit-start-grayscale": `${exit.startGrayscale}%`,
-                } as React.CSSProperties}
-              >
-                {renderCardInner(exit.card)}
-              </div>
-            ))}
+            {/* EXITING CARDS FLIGHT OVERLAY LAYER */}
+            {exitingCards.map((exit) => {
+              const targetX = exit.direction === "right" ? "150%" : "-150%";
+              const targetRot = exit.direction === "right" ? 15 : -15;
+              const targetGrayscale = exit.direction === "left" ? 100 : exit.startGrayscale;
+
+              const currentTransform = exit.animating
+                ? `translate3d(${targetX}, 15%, 0) rotate(${targetRot}deg)`
+                : `translate3d(${exit.startX}px, ${exit.startY}px, 0) rotate(${exit.startRot}deg)`;
+
+              const currentFilter = exit.animating
+                ? `grayscale(${targetGrayscale}%)`
+                : `grayscale(${exit.startGrayscale}%)`;
+
+              return (
+                <div
+                  key={exit.id}
+                  className="absolute rounded-[16px] overflow-hidden select-none shadow-2xl shadow-top-left-right bg-black pointer-events-none"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    zIndex: 50,
+                    opacity: 1, // Full opacity kept during flight
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    transform: currentTransform,
+                    filter: currentFilter,
+                    transition: exit.animating
+                      ? `transform ${SWIPE_ANIMATION_DURATION}ms ${easing}, filter ${SWIPE_ANIMATION_DURATION}ms ${easing}`
+                      : "none",
+                  }}
+                >
+                  {renderCardInner(exit.card)}
+                </div>
+              );
+            })}
+        
           </div>
         )}
       </div>
@@ -774,7 +675,6 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
               opacity: hasSwipedFirstCard && history.length > 0 ? 1 : 0.35,
             }}
           >
-         
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <path d="M3 10H14C17.866 10 21 13.134 21 17C21 20.866 17.866 24 14 24" stroke="#E6E6E6" strokeWidth="2" strokeLinecap="round" />
               <path d="M8 5L3 10L8 15" stroke="#E6E6E6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -783,7 +683,7 @@ export function SwipeRefineScreen({ onBack }: { onBack?: () => void }) {
 
           <div className="relative w-[76px] h-[76px] flex items-center justify-center">
             <svg className="absolute inset-0 w-full h-full transform -rotate-90">
-              <circle cx="38" cy="38" r={radius} fill="transparent" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" />
+              <circle cx="38" cy="38" r={radius} fill="transparent" stroke="rgba(255, 255, 255, 0.13)" strokeWidth="1" />
               {hasSwipedFirstCard && (
                 <circle
                   cx="38"
